@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
 const { v4: uuidv4 } = require('uuid');
+const TelegramBot = require('node-telegram-bot-api');
 
 // 設定台灣時區 (UTC+8)
 process.env.TZ = 'Asia/Taipei';
@@ -10,6 +11,28 @@ process.env.TZ = 'Asia/Taipei';
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'todos.json');
+
+// Telegram Bot 初始化
+let telegramBot = null;
+
+function initTelegramBot() {
+    const token = process.env.TELEGRAM_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    
+    if (token && chatId) {
+        try {
+            telegramBot = new TelegramBot(token, { polling: false });
+            global.telegramConfig = { chatId };
+            console.log('✅ Telegram Bot 已初始化');
+        } catch (err) {
+            console.log(`⚠️ Telegram Bot 初始化失敗: ${err.message}`);
+        }
+    } else {
+        console.log('⚠️ Telegram 未設定（需要環境變數 TELEGRAM_TOKEN 和 TELEGRAM_CHAT_ID）');
+    }
+}
+
+initTelegramBot();
 
 // 中介軟體
 app.use(express.json());
@@ -42,6 +65,39 @@ function readTodos() {
 // 儲存代辦事項
 function saveTodos(todos) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), 'utf8');
+}
+
+// 發送 Telegram 通知
+function sendTelegramNotification(message) {
+    if (!telegramBot || !global.telegramConfig?.chatId) {
+        console.log('Telegram 未設定，無法發送通知');
+        return false;
+    }
+    
+    telegramBot.sendMessage(global.telegramConfig.chatId, message, { parse_mode: 'HTML' })
+        .then(() => console.log('✅ Telegram 通知已發送'))
+        .catch(err => console.log(`⚠️ Telegram 發送失敗: ${err.message}`));
+}
+
+// 格式化代辦事項訊息
+function formatTodoMessage(todo, type) {
+    let emoji = '📝';
+    if (type === 'completed') emoji = '✅';
+    else if (type === 'deleted') emoji = '🗑️';
+    else if (type === 'dayBefore') emoji = '📅';
+    else if (type === 'hourBefore') emoji = '⏰';
+    else if (type === 'now') emoji = '🔔';
+    
+    let msg = `${emoji} <b>代辦事項</b>\n`;
+    msg += `━━━━━━━━━━━━━━━━\n`;
+    msg += `📌 ${todo.thing}\n`;
+    if (todo.time) msg += `🕐 時間: ${todo.time}\n`;
+    if (todo.date) msg += `📅 日期: ${todo.date}\n`;
+    if (todo.person) msg += `👤 人員: ${todo.person}\n`;
+    if (todo.place) msg += `📍 地點: ${todo.place}\n`;
+    if (todo.stuff) msg += `📦 物品: ${todo.stuff}\n`;
+    msg += `━━━━━━━━━━━━━━━━`;
+    return msg;
 }
 
 // 取得今天的代辦事項 (台灣時區)
@@ -89,6 +145,9 @@ app.post('/api/todos', (req, res) => {
     todos.push(newTodo);
     saveTodos(todos);
     
+    // 發送 Telegram 通知
+    sendTelegramNotification(formatTodoMessage(newTodo, 'new'));
+    
     res.json(newTodo);
 });
 
@@ -105,6 +164,11 @@ app.post('/api/todos/:id/toggle', (req, res) => {
     todo.completed = !todo.completed;
     saveTodos(todos);
     
+    // 發送 Telegram 通知
+    if (todo.completed) {
+        sendTelegramNotification(formatTodoMessage(todo, 'completed'));
+    }
+    
     res.json(todo);
 });
 
@@ -112,8 +176,14 @@ app.post('/api/todos/:id/toggle', (req, res) => {
 app.delete('/api/todos/:id', (req, res) => {
     const { id } = req.params;
     let todos = readTodos();
+    const todo = todos.find(t => t.id === id);
     todos = todos.filter(t => t.id !== id);
     saveTodos(todos);
+    
+    // 發送 Telegram 通知
+    if (todo) {
+        sendTelegramNotification(formatTodoMessage(todo, 'deleted'));
+    }
     
     res.json({ success: true });
 });
@@ -154,6 +224,7 @@ function checkTodosForNotification() {
             if (todo.place) msg += `\n📍 ${todo.place}`;
             if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
             console.log(`[一天前] ${msg}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'dayBefore'));
         }
         
         // 一小時前提醒
@@ -166,6 +237,7 @@ function checkTodosForNotification() {
             if (todo.place) msg += `\n📍 ${todo.place}`;
             if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
             console.log(`[一小時前] ${msg}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'hourBefore'));
         }
         
         // 時間到提醒
@@ -178,6 +250,7 @@ function checkTodosForNotification() {
             if (todo.place) msg += `\n📍 ${todo.place}`;
             if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
             console.log(`[時間到] ${msg}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
     });
 }

@@ -92,10 +92,7 @@ function escapeHtml(text) {
 
 function formatTodoMessage(todo, type) {
     let emoji = '📝';
-    if (type === 'completed') emoji = '✅';
-    else if (type === 'deleted') emoji = '🗑️';
-    else if (type === 'dayBefore') emoji = '📅';
-    else if (type === 'hourBefore') emoji = '⏰';
+    if (type === 'reminder') emoji = '⏰';
     else if (type === 'now') emoji = '🔔';
     
     let msg = `${emoji} <b>代辦事項</b>\n`;
@@ -137,13 +134,12 @@ app.get('/api/todos', (req, res) => {
 
 // API: 新增代辦事項
 app.post('/api/todos', (req, res) => {
-    const { thing, person, time, place, stuff, date } = req.body;
+    const { thing, person, time, place, stuff, date, reminderMinutes } = req.body;
     if (!thing || !time) {
         return res.status(400).json({ error: '缺少必要欄位' });
     }
     
     const todos = readTodos();
-    // 優先使用前端傳入的日期，否則使用台灣當天日期
     const todoDate = date || getTaiwanDateString();
     const newTodo = {
         id: uuidv4(),
@@ -154,8 +150,7 @@ app.post('/api/todos', (req, res) => {
         place: place || '',
         stuff: stuff || '',
         completed: false,
-        notifiedDayBefore: false,
-        notifiedHourBefore: false,
+        reminderMinutes: reminderMinutes ? parseInt(reminderMinutes) : null,
         notified: false
     };
     
@@ -205,40 +200,36 @@ function checkTodosForNotification() {
         
         const todoDateTime = `${todo.date}T${todo.time}`;
         
-        // 計算提醒時間
+        // 如果沒有設定提醒時間，跳過
+        if (!todo.reminderMinutes) return;
+        
         const todoTime = new Date(todoDateTime);
-        const dayBeforeTime = new Date(todoTime);
-        dayBeforeTime.setDate(dayBeforeTime.getDate() - 1);
-        const dayBeforeStr = dayBeforeTime.toISOString().slice(0, 16);
+        const reminderTime = new Date(todoTime);
+        reminderTime.setMinutes(reminderTime.getMinutes() - todo.reminderMinutes);
+        const reminderStr = reminderTime.toISOString().slice(0, 16);
         
-        const hourBeforeTime = new Date(todoTime);
-        hourBeforeTime.setHours(hourBeforeTime.getHours() - 1);
-        const hourBeforeStr = hourBeforeTime.toISOString().slice(0, 16);
-        
-        // 時間到提醒 (優先檢查)
+        // 時間到提醒
         if (!todo.notified && nowStr >= todoDateTime) {
             todo.notified = true;
-            todo.notifiedHourBefore = true;
-            todo.notifiedDayBefore = true;
             saveTodos(todos);
             console.log(`[時間到] ${todo.time} - ${todo.thing}`);
             sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
         
-        // 一小時前提醒
-        else if (!todo.notifiedHourBefore && nowStr >= hourBeforeStr) {
-            todo.notifiedHourBefore = true;
+        // 提醒時間
+        else if (!todo.notified && nowStr >= reminderStr) {
+            todo.notified = true;
             saveTodos(todos);
-            console.log(`[一小時前] ${todo.time} - ${todo.thing}`);
-            sendTelegramNotification(formatTodoMessage(todo, 'hourBefore'));
-        }
-        
-        // 一天前提醒
-        else if (!todo.notifiedDayBefore && nowStr >= dayBeforeStr) {
-            todo.notifiedDayBefore = true;
-            saveTodos(todos);
-            console.log(`[一天前] ${todo.time} - ${todo.thing}`);
-            sendTelegramNotification(formatTodoMessage(todo, 'dayBefore'));
+            let reminderText = '';
+            if (todo.reminderMinutes >= 1440) {
+                reminderText = `${todo.reminderMinutes / 1440}天前`;
+            } else if (todo.reminderMinutes >= 60) {
+                reminderText = `${todo.reminderMinutes / 60}小時前`;
+            } else {
+                reminderText = `${todo.reminderMinutes}分鐘前`;
+            }
+            console.log(`[${reminderText}] ${todo.time} - ${todo.thing}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'reminder'));
         }
     });
 }

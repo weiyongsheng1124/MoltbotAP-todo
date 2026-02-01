@@ -69,6 +69,7 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
     const time = document.getElementById('todo-time');
     const place = document.getElementById('todo-place');
     const stuff = document.getElementById('todo-stuff');
+    const reminder = document.getElementById('todo-reminder');
     
     await fetch(`${API_URL}/todos`, {
         method: 'POST',
@@ -79,7 +80,8 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
             date: date.value,
             time: time.value,
             place: place.value,
-            stuff: stuff.value
+            stuff: stuff.value,
+            reminderMinutes: reminder.value || null
         })
     });
     
@@ -89,6 +91,7 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
     time.value = '';
     place.value = '';
     stuff.value = '';
+    reminder.value = '';
     fetchTodos();
 });
 

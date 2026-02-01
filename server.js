@@ -214,21 +214,23 @@ function checkTodosForNotification() {
         
         const nowStr = now.toISOString().slice(0, 16);
         
-        // 一天前提醒
-        if (!todo.notifiedDayBefore && nowStr >= dayBeforeStr) {
-            todo.notifiedDayBefore = true;
+        // 時間到提醒 (優先檢查)
+        if (!todo.notified && nowStr >= todoDateTime) {
+            todo.notified = true;
+            todo.notifiedHourBefore = true;  // 防止重複發送
+            todo.notifiedDayBefore = true;   // 防止重複發送
             saveTodos(todos);
-            let msg = `【提醒】明天 ${todo.time}`;
+            let msg = `【現在】${todo.time}`;
             if (todo.thing) msg += ` - ${todo.thing}`;
             if (todo.person) msg += `\n👤 ${todo.person}`;
             if (todo.place) msg += `\n📍 ${todo.place}`;
             if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
-            console.log(`[一天前] ${msg}`);
-            sendTelegramNotification(formatTodoMessage(todo, 'dayBefore'));
+            console.log(`[時間到] ${msg}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
         
-        // 一小時前提醒
-        if (!todo.notifiedHourBefore && nowStr >= hourBeforeStr) {
+        // 一小時前提醒 (如果還沒到時間)
+        else if (!todo.notifiedHourBefore && nowStr >= hourBeforeStr) {
             todo.notifiedHourBefore = true;
             saveTodos(todos);
             let msg = `【提醒】一小時後 ${todo.time}`;
@@ -240,17 +242,17 @@ function checkTodosForNotification() {
             sendTelegramNotification(formatTodoMessage(todo, 'hourBefore'));
         }
         
-        // 時間到提醒
-        if (!todo.notified && nowStr >= todoDateTime) {
-            todo.notified = true;
+        // 一天前提醒 (如果還沒到一小時前)
+        else if (!todo.notifiedDayBefore && nowStr >= dayBeforeStr) {
+            todo.notifiedDayBefore = true;
             saveTodos(todos);
-            let msg = `【現在】${todo.time}`;
+            let msg = `【提醒】明天 ${todo.time}`;
             if (todo.thing) msg += ` - ${todo.thing}`;
             if (todo.person) msg += `\n👤 ${todo.person}`;
             if (todo.place) msg += `\n📍 ${todo.place}`;
             if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
-            console.log(`[時間到] ${msg}`);
-            sendTelegramNotification(formatTodoMessage(todo, 'now'));
+            console.log(`[一天前] ${msg}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'dayBefore'));
         }
     });
 }

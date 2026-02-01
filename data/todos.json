@@ -1,0 +1,15 @@
+[
+  {
+    "id": "1a57d907-a95b-49f9-a788-687170a42e48",
+    "date": "2026-02-01",
+    "thing": "起床",
+    "person": "",
+    "time": "10:00",
+    "place": "",
+    "stuff": "",
+    "completed": false,
+    "notifiedDayBefore": true,
+    "notifiedHourBefore": false,
+    "notified": false
+  }
+]

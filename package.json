@@ -1,0 +1,16 @@
+{
+    "name": "todo-app",
+    "version": "1.0.0",
+    "description": "代辦事項應用程式",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "mime": "^4.1.0",
+        "node-cron": "^3.0.3",
+        "uuid": "^9.0.0"
+    }
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代辦事項</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>代辦事項</h1>
+            <p id="date"></p>
+        </header>
+        
+        <form id="todo-form">
+            <input type="text" id="todo-thing" placeholder="事項" required>
+            <input type="text" id="todo-person" placeholder="人">
+            <input type="time" id="todo-time" required>
+            <input type="text" id="todo-place" placeholder="地點">
+            <input type="text" id="todo-stuff" placeholder="物品">
+            <button type="submit">新增</button>
+        </form>
+        
+        <ul id="todo-list"></ul>
+    </div>
+    <script src="/script.js"></script>
+</body>
+</html>

@@ -120,7 +120,7 @@ function getTodayTodos(todos) {
 // 取得台灣現在時間 (ISO 字串)
 function getTaiwanNow() {
     // 使用 toLocaleString 正確取得台灣時間
-    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' ));
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
 }
 
 // 取得台灣日期字串 (YYYY-MM-DD)

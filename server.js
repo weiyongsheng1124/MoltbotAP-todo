@@ -162,9 +162,6 @@ app.post('/api/todos', (req, res) => {
     todos.push(newTodo);
     saveTodos(todos);
     
-    // 發送 Telegram 通知
-    sendTelegramNotification(formatTodoMessage(newTodo, 'new'));
-    
     res.json(newTodo);
 });
 

@@ -178,11 +178,6 @@ app.post('/api/todos/:id/toggle', (req, res) => {
     todo.completed = !todo.completed;
     saveTodos(todos);
     
-    // 發送 Telegram 通知
-    if (todo.completed) {
-        sendTelegramNotification(formatTodoMessage(todo, 'completed'));
-    }
-    
     res.json(todo);
 });
 

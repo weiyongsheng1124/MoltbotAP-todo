@@ -266,5 +266,29 @@ app.post('/api/check-notifications', (req, res) => {
 // 啟動伺服器
 app.listen(PORT, () => {
     console.log(`伺服器運行中: http://localhost:${PORT}`);
-    console.log('代辦事項通知監控已啟動');
+    
+    // 啟動時清理過期的代辦事項（日期已過且未完成）
+    const todos = readTodos();
+    const taiwanNow = getTaiwanNow();
+    const todayStr = taiwanNow.toISOString().split('T')[0];
+    const currentTime = `${String(taiwanNow.getHours()).padStart(2, '0')}:${String(taiwanNow.getMinutes()).padStart(2, '0')}`;
+    
+    const expiredTodos = todos.filter(todo => {
+        if (todo.completed) return false;
+        if (todo.date > todayStr) return false;
+        if (todo.date === todayStr && todo.time > currentTime) return false;
+        return true;
+    });
+    
+    if (expiredTodos.length > 0) {
+        const remainingTodos = todos.filter(todo => {
+            if (todo.completed) return true;
+            if (todo.date > todayStr) return true;
+            if (todo.date === todayStr && todo.time > currentTime) return true;
+            return false;
+        });
+        saveTodos(remainingTodos);
+        console.log(`🧹 已清理 ${expiredTodos.length} 個過期代辦事項`);
+    }
+});
 });

@@ -193,14 +193,8 @@ app.post('/api/todos/:id/toggle', (req, res) => {
 app.delete('/api/todos/:id', (req, res) => {
     const { id } = req.params;
     let todos = readTodos();
-    const todo = todos.find(t => t.id === id);
     todos = todos.filter(t => t.id !== id);
     saveTodos(todos);
-    
-    // 發送 Telegram 通知
-    if (todo) {
-        sendTelegramNotification(formatTodoMessage(todo, 'deleted'));
-    }
     
     res.json({ success: true });
 });

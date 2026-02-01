@@ -199,16 +199,17 @@ function checkTodosForNotification() {
         if (todo.completed) return;
         
         const todoDateTime = `${todo.date}T${todo.time}`;
-        
-        // 如果沒有設定提醒時間，跳過
-        if (!todo.reminderMinutes) return;
-        
         const todoTime = new Date(todoDateTime);
-        const reminderTime = new Date(todoTime);
-        reminderTime.setMinutes(reminderTime.getMinutes() - todo.reminderMinutes);
-        const reminderStr = reminderTime.toISOString().slice(0, 16);
         
-        // 時間到提醒
+        // 如果有設定提醒時間，計算提醒時間點
+        let reminderStr = null;
+        if (todo.reminderMinutes) {
+            const reminderTime = new Date(todoTime);
+            reminderTime.setMinutes(reminderTime.getMinutes() - todo.reminderMinutes);
+            reminderStr = reminderTime.toISOString().slice(0, 16);
+        }
+        
+        // 時間到提醒（無論是否有設定提醒都會發送）
         if (!todo.notified && nowStr >= todoDateTime) {
             todo.notified = true;
             saveTodos(todos);
@@ -216,9 +217,9 @@ function checkTodosForNotification() {
             sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
         
-        // 提醒時間
-        else if (!todo.notified && nowStr >= reminderStr) {
-            todo.notified = true;
+        // 提醒時間（只有設定提醒時間才會發送）
+        else if (todo.reminderMinutes && !todo.reminderNotified && reminderStr && nowStr >= reminderStr) {
+            todo.reminderNotified = true;
             saveTodos(todos);
             let reminderText = '';
             if (todo.reminderMinutes >= 1440) {

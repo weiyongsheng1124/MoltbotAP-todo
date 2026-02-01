@@ -5,6 +5,11 @@ function showDate() {
     const now = new Date();
     const options = { month: 'long', day: 'numeric', weekday: 'short' };
     document.getElementById('date').textContent = now.toLocaleDateString('zh-TW', options);
+    
+    // 初始化日期選擇器為今天
+    const dateInput = document.getElementById('todo-date');
+    const taiwanNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+    dateInput.value = taiwanNow.toISOString().split('T')[0];
 }
 
 // 取得代辦事項列表
@@ -27,6 +32,7 @@ function renderTodos(todos) {
             <div class="todo-info">
                 <span class="todo-thing">${escapeHtml(todo.thing)}</span>
                 <div class="todo-detail">
+                    ${todo.date !== getTodayDateString() ? `<span>📅 ${escapeHtml(todo.date)}</span>` : ''}
                     ${todo.person ? `<span>👤 ${escapeHtml(todo.person)}</span>` : ''}
                     ${todo.place ? `<span>📍 ${escapeHtml(todo.place)}</span>` : ''}
                     ${todo.stuff ? `<span>📦 ${escapeHtml(todo.stuff)}</span>` : ''}
@@ -38,6 +44,12 @@ function renderTodos(todos) {
             </div>
         </li>
     `).join('');
+}
+
+// 取得今天台灣日期字串
+function getTodayDateString() {
+    const taiwanNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+    return taiwanNow.toISOString().split('T')[0];
 }
 
 // HTML 跳脫
@@ -53,6 +65,7 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const thing = document.getElementById('todo-thing');
     const person = document.getElementById('todo-person');
+    const date = document.getElementById('todo-date');
     const time = document.getElementById('todo-time');
     const place = document.getElementById('todo-place');
     const stuff = document.getElementById('todo-stuff');
@@ -63,6 +76,7 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
         body: JSON.stringify({ 
             thing: thing.value,
             person: person.value,
+            date: date.value,
             time: time.value,
             place: place.value,
             stuff: stuff.value
@@ -71,6 +85,7 @@ document.getElementById('todo-form').addEventListener('submit', async (e) => {
     
     thing.value = '';
     person.value = '';
+    date.value = getTodayDateString();
     time.value = '';
     place.value = '';
     stuff.value = '';
@@ -96,7 +111,4 @@ fetchTodos();
 // 定期刷新 (每分鐘)
 setInterval(fetchTodos, 60000);
 
-// 每 5 分鐘自動重整頁面
-setInterval(() => {
-    window.location.reload();
-}, 5 * 60 * 1000);
+// 不再全頁重整，改用局部刷新

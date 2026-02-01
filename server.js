@@ -80,6 +80,16 @@ function sendTelegramNotification(message) {
 }
 
 // 格式化代辦事項訊息
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function formatTodoMessage(todo, type) {
     let emoji = '📝';
     if (type === 'completed') emoji = '✅';
@@ -90,12 +100,12 @@ function formatTodoMessage(todo, type) {
     
     let msg = `${emoji} <b>代辦事項</b>\n`;
     msg += `━━━━━━━━━━━━━━━━\n`;
-    msg += `📌 ${todo.thing}\n`;
-    if (todo.time) msg += `🕐 時間: ${todo.time}\n`;
-    if (todo.date) msg += `📅 日期: ${todo.date}\n`;
-    if (todo.person) msg += `👤 人員: ${todo.person}\n`;
-    if (todo.place) msg += `📍 地點: ${todo.place}\n`;
-    if (todo.stuff) msg += `📦 物品: ${todo.stuff}\n`;
+    msg += `📌 ${escapeHtml(todo.thing)}\n`;
+    if (todo.time) msg += `🕐 時間: ${escapeHtml(todo.time)}\n`;
+    if (todo.date) msg += `📅 日期: ${escapeHtml(todo.date)}\n`;
+    if (todo.person) msg += `👤 人員: ${escapeHtml(todo.person)}\n`;
+    if (todo.place) msg += `📍 地點: ${escapeHtml(todo.place)}\n`;
+    if (todo.stuff) msg += `📦 物品: ${escapeHtml(todo.stuff)}\n`;
     msg += `━━━━━━━━━━━━━━━━`;
     return msg;
 }
@@ -109,7 +119,13 @@ function getTodayTodos(todos) {
 
 // 取得台灣現在時間 (ISO 字串)
 function getTaiwanNow() {
-    return new Date(new Date().getTime() + 8 * 60 * 60 * 1000);
+    // 使用 toLocaleString 正確取得台灣時間
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' ));
+}
+
+// 取得台灣日期字串 (YYYY-MM-DD)
+function getTaiwanDateString() {
+    return getTaiwanNow().toISOString().split('T')[0];
 }
 
 // API: 取得代辦事項
@@ -121,25 +137,26 @@ app.get('/api/todos', (req, res) => {
 
 // API: 新增代辦事項
 app.post('/api/todos', (req, res) => {
-    const { thing, person, time, place, stuff } = req.body;
+    const { thing, person, time, place, stuff, date } = req.body;
     if (!thing || !time) {
         return res.status(400).json({ error: '缺少必要欄位' });
     }
     
     const todos = readTodos();
-    const taiwanNow = getTaiwanNow();
+    // 優先使用前端傳入的日期，否則使用台灣當天日期
+    const todoDate = date || getTaiwanDateString();
     const newTodo = {
         id: uuidv4(),
-        date: taiwanNow.toISOString().split('T')[0],
+        date: todoDate,
         thing,
         person: person || '',
         time,
         place: place || '',
         stuff: stuff || '',
         completed: false,
-        notifiedDayBefore: false,  // 一天前
-        notifiedHourBefore: false, // 一小時前
-        notified: false            // 時間到
+        notifiedDayBefore: false,
+        notifiedHourBefore: false,
+        notified: false
     };
     
     todos.push(newTodo);
@@ -188,79 +205,66 @@ app.delete('/api/todos/:id', (req, res) => {
     res.json({ success: true });
 });
 
+// 確保 cron 只註冊一次
+let cronInitialized = false;
+
 // 檢查代辦事項是否需要通知 (台灣時區)
 function checkTodosForNotification() {
     const todos = readTodos();
     const now = getTaiwanNow();
-    const currentDate = now.toISOString().split('T')[0];
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const nowStr = now.toISOString().slice(0, 16);
     
     todos.forEach(todo => {
         if (todo.completed) return;
         
         const todoDateTime = `${todo.date}T${todo.time}`;
-        const todoTime = new Date(todoDateTime);
         
         // 計算提醒時間
+        const todoTime = new Date(todoDateTime);
         const dayBeforeTime = new Date(todoTime);
         dayBeforeTime.setDate(dayBeforeTime.getDate() - 1);
-        const dayBeforeStr = dayBeforeTime.toISOString().split('T')[0] + 'T' + 
-            `${String(dayBeforeTime.getHours()).padStart(2, '0')}:${String(dayBeforeTime.getMinutes()).padStart(2, '0')}`;
+        const dayBeforeStr = dayBeforeTime.toISOString().slice(0, 16);
         
         const hourBeforeTime = new Date(todoTime);
         hourBeforeTime.setHours(hourBeforeTime.getHours() - 1);
-        const hourBeforeStr = hourBeforeTime.toISOString().split('T')[0] + 'T' + 
-            `${String(hourBeforeTime.getHours()).padStart(2, '0')}:${String(hourBeforeTime.getMinutes()).padStart(2, '0')}`;
-        
-        const nowStr = now.toISOString().slice(0, 16);
+        const hourBeforeStr = hourBeforeTime.toISOString().slice(0, 16);
         
         // 時間到提醒 (優先檢查)
         if (!todo.notified && nowStr >= todoDateTime) {
             todo.notified = true;
-            todo.notifiedHourBefore = true;  // 防止重複發送
-            todo.notifiedDayBefore = true;   // 防止重複發送
+            todo.notifiedHourBefore = true;
+            todo.notifiedDayBefore = true;
             saveTodos(todos);
-            let msg = `【現在】${todo.time}`;
-            if (todo.thing) msg += ` - ${todo.thing}`;
-            if (todo.person) msg += `\n👤 ${todo.person}`;
-            if (todo.place) msg += `\n📍 ${todo.place}`;
-            if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
-            console.log(`[時間到] ${msg}`);
+            console.log(`[時間到] ${todo.time} - ${todo.thing}`);
             sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
         
-        // 一小時前提醒 (如果還沒到時間)
+        // 一小時前提醒
         else if (!todo.notifiedHourBefore && nowStr >= hourBeforeStr) {
             todo.notifiedHourBefore = true;
             saveTodos(todos);
-            let msg = `【提醒】一小時後 ${todo.time}`;
-            if (todo.thing) msg += ` - ${todo.thing}`;
-            if (todo.person) msg += `\n👤 ${todo.person}`;
-            if (todo.place) msg += `\n📍 ${todo.place}`;
-            if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
-            console.log(`[一小時前] ${msg}`);
+            console.log(`[一小時前] ${todo.time} - ${todo.thing}`);
             sendTelegramNotification(formatTodoMessage(todo, 'hourBefore'));
         }
         
-        // 一天前提醒 (如果還沒到一小時前)
+        // 一天前提醒
         else if (!todo.notifiedDayBefore && nowStr >= dayBeforeStr) {
             todo.notifiedDayBefore = true;
             saveTodos(todos);
-            let msg = `【提醒】明天 ${todo.time}`;
-            if (todo.thing) msg += ` - ${todo.thing}`;
-            if (todo.person) msg += `\n👤 ${todo.person}`;
-            if (todo.place) msg += `\n📍 ${todo.place}`;
-            if (todo.stuff) msg += `\n📦 ${todo.stuff}`;
-            console.log(`[一天前] ${msg}`);
+            console.log(`[一天前] ${todo.time} - ${todo.thing}`);
             sendTelegramNotification(formatTodoMessage(todo, 'dayBefore'));
         }
     });
 }
 
-// 每分鐘檢查一次代辦事項
-cron.schedule('* * * * *', () => {
-    checkTodosForNotification();
-});
+// 每分鐘檢查一次代辦事項 (只註冊一次)
+if (!cronInitialized) {
+    cron.schedule('* * * * *', () => {
+        checkTodosForNotification();
+    });
+    cronInitialized = true;
+    console.log('✅ 代辦事項通知監控已啟動');
+}
 
 // API: 手動觸發通知檢查 (測試用)
 app.post('/api/check-notifications', (req, res) => {

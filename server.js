@@ -209,16 +209,8 @@ function checkTodosForNotification() {
             reminderStr = reminderTime.toISOString().slice(0, 16);
         }
         
-        // 時間到提醒（無論是否有設定提醒都會發送）
-        if (!todo.notified && nowStr >= todoDateTime) {
-            todo.notified = true;
-            saveTodos(todos);
-            console.log(`[時間到] ${todo.time} - ${todo.thing}`);
-            sendTelegramNotification(formatTodoMessage(todo, 'now'));
-        }
-        
-        // 提醒時間（只有設定提醒時間才會發送）
-        else if (todo.reminderMinutes && !todo.reminderNotified && reminderStr && nowStr >= reminderStr) {
+        // 優先：提醒時間（只有設定提醒時間才會發送）
+        if (todo.reminderMinutes && !todo.reminderNotified && reminderStr && nowStr >= reminderStr) {
             todo.reminderNotified = true;
             saveTodos(todos);
             let reminderText = '';
@@ -231,6 +223,14 @@ function checkTodosForNotification() {
             }
             console.log(`[${reminderText}] ${todo.time} - ${todo.thing}`);
             sendTelegramNotification(formatTodoMessage(todo, 'reminder'));
+        }
+        
+        // 備援：時間到提醒（沒有設定提醒時間才會發送）
+        else if (!todo.reminderMinutes && !todo.notified && nowStr >= todoDateTime) {
+            todo.notified = true;
+            saveTodos(todos);
+            console.log(`[時間到] ${todo.time} - ${todo.thing}`);
+            sendTelegramNotification(formatTodoMessage(todo, 'now'));
         }
     });
 }

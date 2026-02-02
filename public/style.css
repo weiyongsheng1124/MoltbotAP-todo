@@ -78,6 +78,15 @@ h1 {
     list-style: none;
 }
 
+.date-header {
+    font-size: 0.875rem;
+    color: #666;
+    font-weight: 600;
+    padding: 1rem 0 0.5rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0.5rem;
+}
+
 .todo-item {
     display: grid;
     grid-template-columns: auto 1fr auto;

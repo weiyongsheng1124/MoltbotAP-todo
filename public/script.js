@@ -12,6 +12,21 @@ function showDate() {
     dateInput.value = taiwanNow.toISOString().split('T')[0];
 }
 
+// 格式化日期顯示
+function formatDateDisplay(dateStr) {
+    const today = getTodayDateString();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    if (dateStr === today) return '今天';
+    if (dateStr === tomorrowStr) return '明天';
+    // 轉換為民國年顯示
+    const [year, month, day] = dateStr.split('-');
+    const rocYear = parseInt(year) - 1911;
+    return `${rocYear}/${month}/${day}`;
+}
+
 // 取得代辦事項列表
 async function fetchTodos() {
     const res = await fetch(`${API_URL}/todos`);
@@ -19,20 +34,34 @@ async function fetchTodos() {
     renderTodos(todos);
 }
 
-// 渲染代辦事項
+// 渲染代辦事項（按日期分組）
 function renderTodos(todos) {
     const list = document.getElementById('todo-list');
     if (todos.length === 0) {
         list.innerHTML = '<li style="text-align: center; color: #888; padding: 2rem;">尚無代辦事項</li>';
         return;
     }
-    list.innerHTML = todos.map(todo => `
+    
+    // 按日期分組
+    const grouped = {};
+    todos.forEach(todo => {
+        if (!grouped[todo.date]) {
+            grouped[todo.date] = [];
+        }
+        grouped[todo.date].push(todo);
+    });
+    
+    // 產生 HTML
+    let html = '';
+    Object.keys(grouped).sort().forEach(date => {
+        html += `<li class="date-header">📅 ${formatDateDisplay(date)}</li>`;
+        grouped[date].forEach(todo => {
+            html += `
         <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
             <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')">
             <div class="todo-info">
                 <span class="todo-thing">${escapeHtml(todo.thing)}</span>
                 <div class="todo-detail">
-                    ${todo.date !== getTodayDateString() ? `<span>📅 ${escapeHtml(todo.date)}</span>` : ''}
                     ${todo.person ? `<span>👤 ${escapeHtml(todo.person)}</span>` : ''}
                     ${todo.place ? `<span>📍 ${escapeHtml(todo.place)}</span>` : ''}
                     ${todo.stuff ? `<span>📦 ${escapeHtml(todo.stuff)}</span>` : ''}
@@ -42,8 +71,11 @@ function renderTodos(todos) {
                 <span class="todo-time">${todo.time}</span>
                 <button class="delete-btn" onclick="deleteTodo('${todo.id}')">×</button>
             </div>
-        </li>
-    `).join('');
+        </li>`;
+        });
+    });
+    
+    list.innerHTML = html;
 }
 
 // 取得今天台灣日期字串

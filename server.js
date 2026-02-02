@@ -125,11 +125,19 @@ function getTaiwanDateString() {
     return getTaiwanNow().toISOString().split('T')[0];
 }
 
-// API: 取得代辦事項
+// API: 取得所有未完成的代辦事項（按日期排序）
 app.get('/api/todos', (req, res) => {
     const todos = readTodos();
-    const todayTodos = getTodayTodos(todos).sort((a, b) => a.time.localeCompare(b.time));
-    res.json(todayTodos);
+    // 只顯示未完成的，按日期和時間排序
+    const pendingTodos = todos
+        .filter(todo => !todo.completed)
+        .sort((a, b) => {
+            // 先按日期排序
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            // 同一天按時間排序
+            return a.time.localeCompare(b.time);
+        });
+    res.json(pendingTodos);
 });
 
 // API: 新增代辦事項

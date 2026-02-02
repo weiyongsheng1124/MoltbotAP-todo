@@ -1,53 +1,54 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="代辦事項管理 - 追蹤您的每日任務">
+    <meta name="description" content="Todo List - Track your tasks">
     <meta name="theme-color" content="#5c6bc0">
-    <title>代辦事項</title>
+    <title>Todo List</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>✅ 代辦事項</h1>
+            <h1>✅ Todo List</h1>
             <p id="date"></p>
         </header>
 
-        <form id="todo-form" aria-label="新增代辦事項">
-            <!-- 主要資訊 -->
+        <form id="todo-form" aria-label="Add new todo">
+            <!-- Date & Time -->
             <div class="form-row">
-                <input type="date" id="todo-date" required aria-label="日期">
-                <input type="time" id="todo-time" required aria-label="時間">
+                <input type="date" id="todo-date" required aria-label="Date">
+                <input type="time" id="todo-time" required aria-label="Time">
+            </div>
+
+            <!-- Main task -->
+            <div class="form-row">
+                <input type="text" id="todo-thing" placeholder="What to do?" required aria-label="Task" autocomplete="off">
+            </div>
+
+            <!-- Details -->
+            <div class="form-row">
+                <input type="text" id="todo-person" placeholder="👤 Person" aria-label="Person" autocomplete="off">
+                <input type="text" id="todo-place" placeholder="📍 Location" aria-label="Location" autocomplete="off">
             </div>
 
             <div class="form-row">
-                <input type="text" id="todo-thing" placeholder="要做什麼？" required aria-label="事項內容" autocomplete="off">
-            </div>
-
-            <!-- 詳細資訊 -->
-            <div class="form-row">
-                <input type="text" id="todo-person" placeholder="👤 對象" aria-label="對象" autocomplete="off">
-                <input type="text" id="todo-place" placeholder="📍 地點" aria-label="地點" autocomplete="off">
-            </div>
-
-            <div class="form-row">
-                <input type="text" id="todo-stuff" placeholder="📦 物品" aria-label="物品" autocomplete="off">
-                <select id="todo-reminder" aria-label="提醒時間">
-                    <option value="">🔔 提醒時間</option>
-                    <option value="1440">一天前</option>
-                    <option value="60">一小時前</option>
-                    <option value="30">半小時前</option>
-                    <option value="10">十分鐘前</option>
+                <input type="text" id="todo-stuff" placeholder="📦 Items" aria-label="Items" autocomplete="off">
+                <select id="todo-reminder" aria-label="Reminder">
+                    <option value="">🔔 Reminder</option>
+                    <option value="1440">1 day before</option>
+                    <option value="60">1 hour before</option>
+                    <option value="30">30 min before</option>
+                    <option value="10">10 min before</option>
                 </select>
             </div>
 
-            <button type="submit">➕ 新增代辦事項</button>
+            <button type="submit">➕ Add Todo</button>
         </form>
 
         <main>
-            <ul id="todo-list" aria-label="代辦事項列表"></ul>
+            <ul id="todo-list" aria-label="Todo list"></ul>
         </main>
     </div>
 
